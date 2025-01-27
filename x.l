@@ -9,7 +9,6 @@
 
     int start_line;
 
-
 %}
 
  /* DECLARATION SECTION */
@@ -55,24 +54,88 @@ IDENT [a-zA-Z_:][a-zA-Z0-9_:-]*
 
 <INITIAL>"<?"{IDENT} {
     BEGIN(ST_PI); 
-    process_token(yytext, "PI_TAG_BEG", yytext + 2, PI_TAG_BEG);
+    return process_token(yytext, "PI_TAG_BEG", yytext + 2, PI_TAG_BEG);
 }
 
 <ST_PI>"?>" {
     BEGIN(INITIAL);
-    process_token(yytext, "PI_TAG_END", "", PI_TAG_END);
+    return process_token(yytext, "PI_TAG_END", "", PI_TAG_END);
 }
 
 <INITIAL>"?>" {
     fprintf(stderr, "Error: Processing instruction closed on line %d when not opened\n", yylineno);
-    process_token(yytext, "PI_TAG_END", "", PI_TAG_END);
+    return process_token(yytext, "PI_TAG_END", "", PI_TAG_END);
 }
 
 <ST_PI> . | \n
 
     /*  TAG HANDLING */
 
+<INITIAL>"<"{IDENT} {
+    BEGIN(ST_TAG);
+    return process_token(yytext, "STAG_BEG", yytext + 1, STAG_BEG);
+    start_line = yylineno;
+}
 
+<INITIAL>"</"{IDENT} {
+    BEGIN(ST_TAG);
+    return process_token(yytext, "ETAG_BEG", yytext+2, ETAG_END);
+}
+
+<ST_TAG>"/>"
+{
+    BEGIN(INITIAL);
+    process_token(yytext, "ETAG_END", "", ETAG_END);
+}
+
+<ST_TAG>">" {
+    BEGIN(INITIAL);
+    return process_token(yytext, "TAG_END", "", TAG_END);
+}
+
+<ST_TAG> . | \n
+
+ /* handling of closing tag without opening tag */
+
+<INITIAL>">" {
+    fprintf(stderr, "Error: Tag closed on line %d when not opened\n", yylineno);
+    return process_token(yytext, "TAG_END", "", TAG_END);
+}
+
+<INITIAL>"/>" {
+    fprintf(stderr, "Error: Tag closed on line %d when not opened\n", yylineno);
+    return process_token(yytext, "ETAG_END", "", ETAG_END);
+}
+
+  <ST_TAG> . | \n
+
+ /* STRINGS HANDLING */
+
+"&lt;" { return process_token(yytext, "CHAR", "<", CHAR); }
+"&gt;" { return process_token(yytext, "CHAR", ">", CHAR); }
+"&amp;" { return process_token(yytext, "CHAR", "&", CHAR); }
+"&quot;" { return process_token(yytext, "CHAR", "\"", CHAR); }
+"&apos;" { return process_token(yytext, "CHAR", "'", CHAR); }
+
+/* IGNORE WHITESPACES AT THE BEGINNING OF THE LINE */
+
+^[ \t]+
+
+/*  RETURN NEW LINE FEED AS ITSELF */
+
+\n return "\n";
+
+/* IGNORE THE CARRIAGE RETURN */
+
+\r
+
+/* RETURN WHITE SPACES AS S TOKEN */
+
+[ \t] { return process_token(yytext, "S", yytext, S); }
+
+/* DEFAULT */
+
+. { return process_token(yytext, "CHAR", yytext, CHAR); }
 
 
 %% 
@@ -87,28 +150,23 @@ int yywrap(void)
     {
         fprintf(stderr, "Error: Processing instruction opened on line %d when not closed\n", start_line);
     }
+    else  if(YY_START == ST_TAG)
+    {
+        fprintf(stderr, "Error: Tag opened on line %d when not closed\n", start_line);
+    }
     
     return 1;
 }
 
-char* stringcpy(char* dest, const char* src, int len)
-{
-    strncpy(dest, src, len);
-    dest[len] = '\0';
-    return dest;
-}
 
 int process_token(const char *text, const char *TokenType,
                   const char *TokenVal, const int TokenID)
 {
     int l;
     printf("%-20.20s%-15s %s\n", text, TokenType, TokenVal);
-    switch (TokenID) 
-    {
-    case IDENT:
+
     l = strlen(TokenVal);
     strncpy(yylval.s, TokenVal, l <= MAXSTRLEN ? l : MAXSTRLEN);
-    }
     
     return(TokenID);
 }

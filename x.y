@@ -11,6 +11,8 @@
     void indent(int level);
     int yylex(void);
     int yyerror(const char *s);
+    
+
 
 %}
 
@@ -18,12 +20,20 @@
     char s[MAXSTRLEN +1];
 }
 
+%start GRAMMAR
+
 %token<s> PI_TAG_BEG PI_TAG_END STAG_BEG ETAG_BEG
 %token<s> TAG_END ETAG_END CHAR S
 
 %type<s> start_tag end_tag word
 
 %%
+
+GRAMMAR :
+    %empty
+    | error 
+    | document
+;
 
 document :
     introduction element
@@ -74,6 +84,7 @@ word :
 %%
 
 int main(void) {
+
     yyparse();
     return 0;
 }

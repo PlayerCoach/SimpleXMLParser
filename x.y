@@ -8,9 +8,15 @@
 
     int level = 0;
 
+    char word [MAXSTRLEN + 1];
+    int current_line_length = 0;
+
     void indent(int level);
     int yylex(void);
     void yyerror(const char *s);
+
+    void append(char* src);
+    void print_word();
     
 %}
 %debug
@@ -22,10 +28,10 @@
 
 %start GRAMMAR
 
-%token<s> PI_TAG_BEG PI_TAG_END STAG_BEG ETAG_BEG
+%token<s> PI_TAG_BEG PI_TAG_END STAG_BEG ETAG_BEG NAME EQ VALUE
 %token<s> TAG_END ETAG_END CHAR S 
 
-%type<s> start_tag end_tag word processing_instruction content
+%type<s> start_tag end_tag word attributes
 
 %%
 
@@ -51,10 +57,11 @@ processing_sequence:
 
 
 processing_instruction :
-    PI_TAG_BEG content PI_TAG_END
+    PI_TAG_BEG attributes PI_TAG_END
     {
         indent(level);
-        printf("<?%s %s ?>\n", $1, $2);
+        printf("<? %s %s ?>\n", $1, $2);
+        current_line_length = 0;
     }
     ;
 
@@ -68,6 +75,7 @@ empty_tag :
     {
         indent(level);
         printf("<%s/>\n", $1);
+        current_line_length = 0;
     }
     ;
 
@@ -85,6 +93,7 @@ start_tag :
     {
         indent(level);
         printf("<%s>\n", $1);
+        current_line_length = 0;
         level++;
     }
     ;
@@ -95,26 +104,25 @@ end_tag :
         level--;
         indent(level);
         printf("</%s>\n", $1);
+        current_line_length = 0;
     }
     ;
 
 content :
     %empty
     | element content
-    {
-        $$ = $1;
-    }
     | S content
     {
-        $$ = $1;
+        printf("%s", $1);
+        current_line_length += strlen($1);
+        print_word();
     }
     | word content
-    {
-        $$ = $1;
-    }
     | '\n' content
     {
-        $$ = $1;
+        printf("\n");
+        print_word();
+        current_line_length = 0;
     }
     ;
 
@@ -122,13 +130,27 @@ content :
 word :
     CHAR
     {
-        strcpy($$, $1);
+        append($1);
     }
     | CHAR word
     {
-        strcpy($$, $1);
-        strcat($$, $2); 
+        append($1);
     }
+
+    
+attributes :
+    %empty
+    {
+        $$[0] = '\0'; 
+    }
+    | attributes NAME EQ VALUE 
+    {
+        strncat($$, " ", MAXSTRLEN);
+        strncat($$, $2, MAXSTRLEN);
+        strncat($$, "=", MAXSTRLEN);
+        strncat($$, $4, MAXSTRLEN);
+    }
+    ;
     
 
 
@@ -160,6 +182,25 @@ void indent(int level) {
     for (i = 0; i < level * INDENT_LENGTH; i++) {
         putchar(' ');
     }
+}
+
+void append(char* src) {
+    int len = strlen(word);
+    strcpy(word + len, src);
+    word[len + 1] = '\0';
+
+    current_line_length++;
+
+    if (current_line_length >= LINE_WIDTH) {
+        printf("\n");
+        current_line_length = 0;
+    }
+}
+
+void print_word() {
+    printf("%s", word);
+    current_line_length += strlen(word);
+    word[0] = '\0';
 }
     
     

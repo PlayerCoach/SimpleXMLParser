@@ -20,6 +20,7 @@ IDENT [a-zA-Z_:][a-zA-Z0-9_:-]*
 %x ST_COMMENT
 %x ST_PI 
 %x ST_TAG 
+%x ST_ATT
 
 
 %%
@@ -57,9 +58,15 @@ IDENT [a-zA-Z_:][a-zA-Z0-9_:-]*
     return PI_TAG_END;
 }
 
-<ST_PI>.|\n {
-    strncpy(yylval.s, yytext, MAXSTRLEN);
-    return CHAR; }
+<ST_PI>{IDENT} {strncpy(yylval.s, yytext, MAXSTRLEN);BEGIN(ST_ATT); return NAME; } 
+
+<ST_ATT>"=" {return EQ;}
+
+<ST_ATT>\"[^\"]*\" {strncpy(yylval.s, yytext + 1, MAXSTRLEN); BEGIN(ST_PI); return VALUE;}
+
+<ST_ATT>.|\n ;
+
+<ST_PI>.|\n ;
 
     /*  TAG HANDLING */
 

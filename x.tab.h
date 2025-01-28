@@ -58,10 +58,13 @@ extern int yydebug;
     PI_TAG_END = 259,              /* PI_TAG_END  */
     STAG_BEG = 260,                /* STAG_BEG  */
     ETAG_BEG = 261,                /* ETAG_BEG  */
-    TAG_END = 262,                 /* TAG_END  */
-    ETAG_END = 263,                /* ETAG_END  */
-    CHAR = 264,                    /* CHAR  */
-    S = 265                        /* S  */
+    NAME = 262,                    /* NAME  */
+    EQ = 263,                      /* EQ  */
+    VALUE = 264,                   /* VALUE  */
+    TAG_END = 265,                 /* TAG_END  */
+    ETAG_END = 266,                /* ETAG_END  */
+    CHAR = 267,                    /* CHAR  */
+    S = 268                        /* S  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -70,11 +73,11 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 19 "x.y"
+#line 25 "x.y"
 
     char s[MAXSTRLEN +1];
 
-#line 78 "x.tab.h"
+#line 81 "x.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

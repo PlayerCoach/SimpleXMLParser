@@ -83,9 +83,20 @@ pair_of_elements :
     start_tag content end_tag
     {
         if(strncmp($1, $3, MAXSTRLEN) != 0) {
-            fprintf(stderr, "Error: Opening tag %s does not match closing tag %s\n", $1, $3);
+            yyerror("Error: Opening tag does not match closing tag \n");
         }
+
+        if(strlen(word) > 0) {
+            print_word();
+            printf("\n");
+        }
+
+        level--;
+        indent(level);
+        printf("</%s>\n", $3);
+        current_line_length = 0;
     }
+
     ;
 
 start_tag :
@@ -93,19 +104,12 @@ start_tag :
     {
         indent(level);
         printf("<%s>\n", $1);
-        current_line_length = 0;
         level++;
     }
     ;
 
 end_tag :
     ETAG_BEG TAG_END
-    {
-        level--;
-        indent(level);
-        printf("</%s>\n", $1);
-        current_line_length = 0;
-    }
     ;
 
 content :
@@ -113,16 +117,12 @@ content :
     | element content
     | S content
     {
-        printf("%s", $1);
-        current_line_length += strlen($1);
-        print_word();
+      append(" ");
     }
     | word content
     | '\n' content
     {
-        printf("\n");
-        print_word();
-        current_line_length = 0;
+        append("\n");
     }
     ;
 
@@ -189,17 +189,24 @@ void append(char* src) {
     strcpy(word + len, src);
     word[len + 1] = '\0';
 
-    current_line_length++;
-
     if (current_line_length >= LINE_WIDTH) {
         printf("\n");
+        indent(level);
         current_line_length = 0;
     }
 }
 
 void print_word() {
+    int predicted_line_length = current_line_length + strlen(word);
+    if (predicted_line_length >= LINE_WIDTH) {
+        printf("\n");
+        indent(level);
+        current_line_length = 0;
+    } else {
+        current_line_length = predicted_line_length;
+    }
+
     printf("%s", word);
-    current_line_length += strlen(word);
     word[0] = '\0';
 }
     

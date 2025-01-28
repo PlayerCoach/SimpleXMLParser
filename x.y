@@ -2,11 +2,13 @@
     #include "stdio.h"
     #include "string.h"
     #include "defs.h"
+    #include "stdbool.h"
 
     #define INDENT_LENGTH 5
     #define LINE_WIDTH 78
 
     int level = 0;
+    bool new_word = true;
 
     char word [MAXSTRLEN + 1];
     int current_line_length = 0;
@@ -19,7 +21,6 @@
     void print_word();
     
 %}
-%debug
 
 
 %union {
@@ -61,7 +62,7 @@ processing_instruction :
     {
         indent(level);
         printf("<? %s %s ?>\n", $1, $2);
-        current_line_length = 0;
+        new_word = true;
     }
     ;
 
@@ -75,7 +76,7 @@ empty_tag :
     {
         indent(level);
         printf("<%s/>\n", $1);
-        current_line_length = 0;
+        new_word = true;
     }
     ;
 
@@ -94,7 +95,7 @@ pair_of_elements :
         level--;
         indent(level);
         printf("</%s>\n", $3);
-        current_line_length = 0;
+        new_word = true;
     }
 
     ;
@@ -114,13 +115,13 @@ end_tag :
 
 content :
     %empty
-    | element content
-    | S content
+    | content element
+    | content S
     {
       append(" ");
     }
-    | word content
-    | '\n' content
+    | content word
+    | congit conent '\n'
     {
         append("\n");
     }
@@ -185,28 +186,35 @@ void indent(int level) {
 }
 
 void append(char* src) {
-    int len = strlen(word);
-    strcpy(word + len, src);
-    word[len + 1] = '\0';
+    
+    strncat(word, src, MAXSTRLEN);
 
-    if (current_line_length >= LINE_WIDTH) {
-        printf("\n");
+    if(new_word == true) {
         indent(level);
-        current_line_length = 0;
+    }
+    new_word = false;
+    if (level * INDENT_LENGTH + current_line_length + strlen(word) >= LINE_WIDTH) {
+        if (current_line_length == 0) {
+            print_word();
+            printf("\n");
+            indent(level);
+        } else {
+            printf("\n");
+            indent(level);
+        }
+    } else {
+        if (src[0] == ' ') {
+            print_word();
+        } else if (src[0] == '\n') {
+            print_word();
+            new_word = true;
+        }
     }
 }
 
 void print_word() {
-    int predicted_line_length = current_line_length + strlen(word);
-    if (predicted_line_length >= LINE_WIDTH) {
-        printf("\n");
-        indent(level);
-        current_line_length = 0;
-    } else {
-        current_line_length = predicted_line_length;
-    }
-
-    printf("%s", word);
+   printf("%s", word);
+    current_line_length += strlen(word);
     word[0] = '\0';
 }
     

@@ -3,7 +3,7 @@
 <Root x="1" y="1" >
     <Elem1 a="2">A</Elem1>
     <Elem3 b="3"/>
-    <Elem2>B</Elem2>
+    <Elem2>BCDE</Elem2>
 </Root>
 
 

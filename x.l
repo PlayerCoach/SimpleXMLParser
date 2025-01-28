@@ -1,96 +1,91 @@
 %{
-    #include "defs.h"
-    #include "x.tab.h"
-    #include "string.h"
-    #include "stdio.h"
-    #include "stdlib.h"
+#include "defs.h"
+#include "x.tab.h"
+#include "string.h"
+#include "stdio.h"
+#include "stdlib.h"
 
-    int process_token(const char* text, const char* TokenType, 
-                      const char* tokenVal, const int TokenID);
 
-    int start_line;
+int start_line;
 
 %}
 
- /* DECLARATION SECTION */
+    /* DECLARATION SECTION */
 
 IDENT [a-zA-Z_:][a-zA-Z0-9_:-]* 
 
-/*States of the lexer analyzer ( INITIAL is the default state) */
+ /*States of the lexer analyzer ( INITIAL is the default state) */
 
-/* coomment contents*/
+%option yylineno
 %x ST_COMMENT
-/* processing instruction contents */
 %x ST_PI 
-/* tag contents */
 %x ST_TAG 
 
-/* include line number tracking */
-%option yylineno
 
 %%
 
- /*  COMMENTS HANDLING */
+    /*  COMMENTS HANDLING */
 
 <INITIAL>"<!--" {
     BEGIN(ST_COMMENT); start_line = yylineno;
-}
-<INITIAL>"-->" {
-    fprintf(stderr, "Error: Comment closed on line %d when not opened\n", start_line);
 }
     /* Detect valid closing tag and change back to default state */
 <ST_COMMENT>"-->" {
     BEGIN(INITIAL);
 }
 
-    /* Detect invalid closing tag */
-<ST_COMMENT>--+> {
-    fprintf(stderr, "Error: Invalid closing tag of comment  in line %d \n", yylineno);
-}
- /* Ignore the content of the comment */
-<ST_COMMENT>.|\n ;
-
-
+ /* Ignore everything else in the comment state */
+<ST_COMMENT>[^-]+ ;
+<ST_COMMENT>"-"[^-]* ;
+<ST_COMMENT>\n ;
     /*  PROCESSING INSTRUCTION HANDLING */
 
 <INITIAL>"<?"{IDENT} {
     BEGIN(ST_PI); 
-    return process_token(yytext, "PI_TAG_BEG", yytext + 2, PI_TAG_BEG);
+    int l = strlen(yytext)-2;
+    strncpy(yylval.s, yytext + 2, MAXSTRLEN);
+    return PI_TAG_BEG;
 }
 
 <ST_PI>"?>" {
     BEGIN(INITIAL);
-    return process_token(yytext, "PI_TAG_END", "", PI_TAG_END);
+    return PI_TAG_END;
 }
 
 <INITIAL>"?>" {
     fprintf(stderr, "Error: Processing instruction closed on line %d when not opened\n", yylineno);
-    return process_token(yytext, "PI_TAG_END", "", PI_TAG_END);
+    return PI_TAG_END;
 }
 
-<ST_PI>.|\n ;
+<ST_PI>.|\n {
+    strncpy(yylval.s, yytext, MAXSTRLEN);
+    return CHAR; }
 
     /*  TAG HANDLING */
 
 <INITIAL>"<"{IDENT} {
     BEGIN(ST_TAG);
-    return process_token(yytext, "STAG_BEG", yytext + 1, STAG_BEG);
+    int l = strlen(yytext)-1;
+    strncpy(yylval.s, yytext + 1, MAXSTRLEN);
+    return STAG_BEG;
     start_line = yylineno;
 }
 
 <INITIAL>"</"{IDENT} {
     BEGIN(ST_TAG);
-    return process_token(yytext, "ETAG_BEG", yytext+2, ETAG_END);
+    int l = strlen(yytext)-2;
+    strncpy(yylval.s, yytext + 2, MAXSTRLEN);
+    return ETAG_BEG;
 }
 
 <ST_TAG>"/>" {
     BEGIN(INITIAL);
-    return process_token(yytext, "ETAG_END", "", ETAG_END);
+    return ETAG_END;
 }
 
 <ST_TAG>">" {
     BEGIN(INITIAL);
-    return process_token(yytext, "TAG_END", "", TAG_END);
+    return TAG_END;
 }
 
 <ST_TAG>.|\n;
@@ -99,23 +94,23 @@ IDENT [a-zA-Z_:][a-zA-Z0-9_:-]*
 
 <INITIAL>">" {
     fprintf(stderr, "Error: Tag closed on line %d when not opened\n", yylineno);
-    return process_token(yytext, "TAG_END", "", TAG_END);
+    return TAG_END;
 }
 
 <INITIAL>"/>" {
     fprintf(stderr, "Error: Tag closed on line %d when not opened\n", yylineno);
-    return process_token(yytext, "ETAG_END", "", ETAG_END);
+    return ETAG_END;
 }
 
 <ST_TAG>.|\n ;
 
  /* STRINGS HANDLING */
 
-"&lt;" { return process_token(yytext, "CHAR", "<", CHAR); }
-"&gt;" { return process_token(yytext, "CHAR", ">", CHAR); }
-"&amp;" { return process_token(yytext, "CHAR", "&", CHAR); }
-"&quot;" { return process_token(yytext, "CHAR", "\"", CHAR); }
-"&apos;" { return process_token(yytext, "CHAR", "'", CHAR); }
+"&lt;" { strncpy(yylval.s, "<", MAXSTRLEN); return CHAR; }
+"&gt;" { strncpy(yylval.s, ">", MAXSTRLEN); return CHAR; }
+"&amp;" { strncpy(yylval.s, "&", MAXSTRLEN); return CHAR; }
+"&quot;" { strncpy(yylval.s, "\"", MAXSTRLEN); return CHAR; }
+"&apos;" { strncpy(yylval.s, "'", MAXSTRLEN); return CHAR; }
 
     /* IGNORE WHITESPACES AT THE BEGINNING OF THE LINE */
 
@@ -123,7 +118,7 @@ IDENT [a-zA-Z_:][a-zA-Z0-9_:-]*
 
     /*  RETURN NEW LINE FEED AS ITSELF */
 
-\n return "\n";
+\n { return '\n'; }
 
     /* IGNORE THE CARRIAGE RETURN */
 
@@ -131,17 +126,16 @@ IDENT [a-zA-Z_:][a-zA-Z0-9_:-]*
 
     /* RETURN WHITE SPACES AS S TOKEN */
 
-[ \t] { return process_token(yytext, "S", yytext, S); }
+[ \t] { strncpy (yylval.s, yytext, MAXSTRLEN); return S; }
 
     /* DEFAULT */
 
-. { return process_token(yytext, "CHAR", yytext, CHAR); }
+. { strncpy(yylval.s, yytext, MAXSTRLEN); return CHAR; }
 
 
 %% 
 
-int yywrap(void)
-{
+int yywrap(void){
     if(YY_START == ST_COMMENT)
     {
         fprintf(stderr, "Error: Comment opened on line %d when not closed\n", start_line);
@@ -158,17 +152,6 @@ int yywrap(void)
     return 1;
 }
 
-
-int process_token(const char *text, const char *TokenType,
-                  const char *TokenVal, const int TokenID){
-
-    int l;
-
-    l = strlen(TokenVal);
-    strncpy(yylval.s, TokenVal, l <= MAXSTRLEN ? l : MAXSTRLEN);
-    
-    return(TokenID);
-}
 
 
 

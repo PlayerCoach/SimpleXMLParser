@@ -1,6 +1,10 @@
-<!-- Program testowy 1 -->
+<!-- XSLT: Test1.xslt -->
 <?xml version="1.0" encoding="utf-8"?>
-<Root> <!-- element g³ówny -->
-	<Elem1>A</Elem1> <!-- element 1 -->
-	<Elem2>B</Elem2> <!-- element 2 -->
+<Root x="1" y="1" >
+    <Elem1 a="2">A</Elem1>
+    <Elem3 b="3"/>
+    <Elem2>B</Elem2>
 </Root>
+
+
+

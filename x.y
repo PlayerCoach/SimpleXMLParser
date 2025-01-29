@@ -30,10 +30,10 @@
 
 %start GRAMMAR
 
-%token<s> PI_TAG_BEG PI_TAG_END STAG_BEG ETAG_BEG NAME EQ VALUE
+%token<s> PI_TAG_BEG PI_TAG_END STAG_BEG ETAG_BEG
 %token<s> TAG_END ETAG_END CHAR S
 
-%type<s> start_tag end_tag word attributes
+%type<s> start_tag end_tag word
 
 %%
 
@@ -59,27 +59,14 @@ processing_sequence:
 
 
 processing_instruction :
-    PI_TAG_BEG attributes PI_TAG_END
+    PI_TAG_BEG PI_TAG_END
     {
         indent();
-        printf("<? %s %s ?>\n", $1, $2);
+        printf("<?%s?>\n", $1);
         new_line = true;
     }
     ;
 
-attributes :
-    %empty
-    {
-        $$[0] = '\0';
-    }
-    | attributes NAME EQ VALUE
-    {
-        strncat($$, " ", MAXSTRLEN);
-        strncat($$, $2, MAXSTRLEN);
-        strncat($$, "=", MAXSTRLEN);
-        strncat($$, $4, MAXSTRLEN);
-    }
-    ;
 
 element :
     empty_tag
@@ -100,6 +87,7 @@ pair_of_elements :
     {
         if(strncmp($1, $3, MAXSTRLEN) != 0){
             yyerror("Error: Opening tag does not match closing tag \n");
+            return 1;
         }
 
         if(strlen(word) > 0){

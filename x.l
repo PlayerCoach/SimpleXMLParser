@@ -55,12 +55,6 @@ IDENT [a-zA-Z_:][a-zA-Z0-9_:-]*
     BEGIN(INITIAL);
     return PI_TAG_END;
 }
- /* ATTRIBUTE HANDLING */
-<ST_PI>{IDENT} {strncpy(yylval.s, yytext, MAXSTRLEN);BEGIN(ST_ATT); return NAME; }
-<ST_ATT>"=" {return EQ;}
-<ST_ATT>\"[^\"]*\" {strncpy(yylval.s, yytext + 1, MAXSTRLEN); BEGIN(ST_PI); return VALUE;}
-<ST_ATT>.|\n ;
- /* ATTRIBUTE HANDLING */
 
  /* Ignore everything else in the processing instruction state */
 <ST_PI>.|\n ;

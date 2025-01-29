@@ -1,29 +1,30 @@
 %{
+
     #include "stdio.h"
     #include "string.h"
     #include "defs.h"
     #include "stdbool.h"
 
-    #define INDENT_LENGTH 5
+    #define INDENT_LENGTH 2
     #define LINE_WIDTH 78
 
-    int level = 0;
-    bool new_word = true;
-
     char word [MAXSTRLEN + 1];
-    int current_line_length = 0;
+    int level = 0;
+    bool new_line = true;
+    int cursor_position = 0;
 
-    void indent(int level);
+
     int yylex(void);
     void yyerror(const char *s);
 
+    void indent();
     void append(char* src);
     void print_word();
 
 %}
 
 
-%union {
+%union{
     char s[MAXSTRLEN +1];
 }
 
@@ -43,7 +44,7 @@ GRAMMAR : {yyerror( "Empty input source is not valid!"); }
 ;
 
 document :
-    optional_white_space introduction element optional_white_space
+     introduction element
     ;
 
 introduction :
@@ -53,91 +54,18 @@ introduction :
 
 processing_sequence:
     %empty
-    | processing_instruction processing_sequence
+    | processing_sequence processing_instruction
     ;
 
 
 processing_instruction :
     PI_TAG_BEG attributes PI_TAG_END
     {
-        indent(level);
+        indent();
         printf("<? %s %s ?>\n", $1, $2);
-        new_word = true;
+        new_line = true;
     }
     ;
-
-element :
-    empty_tag
-    | pair_of_elements
-    ;
-
-empty_tag :
-    STAG_BEG ETAG_END
-    {
-        indent(level);
-        printf("<%s/>\n", $1);
-        new_word = true;
-    }
-    ;
-
-pair_of_elements :
-    start_tag content end_tag
-    {
-        if(strncmp($1, $3, MAXSTRLEN) != 0) {
-            yyerror("Error: Opening tag does not match closing tag \n");
-        }
-
-        if(strlen(word) > 0) {
-            print_word();
-            printf("\n");
-        }
-
-        level--;
-        indent(level);
-        printf("</%s>\n", $3);
-        new_word = true;
-    }
-
-    ;
-
-start_tag :
-    STAG_BEG TAG_END
-    {
-        indent(level);
-        printf("<%s>\n", $1);
-        level++;
-    }
-    ;
-
-end_tag :
-    ETAG_BEG TAG_END
-    ;
-
-content :
-    %empty
-    | content element
-    | content S
-    {
-      append(" ");
-    }
-    | content word
-    | content '\n'
-    {
-        append("\n");
-    }
-    ;
-
-
-word :
-    CHAR
-    {
-        append($1);
-    }
-    | word CHAR
-    {
-        append($2);
-    }
-
 
 attributes :
     %empty
@@ -153,68 +81,131 @@ attributes :
     }
     ;
 
-
-
-white_space :
-    S
-    | '\n'
+element :
+    empty_tag
+    | pair_of_elements
     ;
 
-optional_white_space :
+empty_tag :
+    STAG_BEG ETAG_END
+    {
+        indent();
+        printf("<%s/>\n", $1);
+        new_line = true;
+    }
+    ;
+
+pair_of_elements :
+    start_tag content end_tag
+    {
+        if(strncmp($1, $3, MAXSTRLEN) != 0){
+            yyerror("Error: Opening tag does not match closing tag \n");
+        }
+
+        if(strlen(word) > 0){
+            print_word();
+            printf("\n");
+        }
+
+        level--;
+        indent();
+        printf("</%s>\n", $3);
+        new_line = true;
+    }
+    ;
+
+start_tag :
+    STAG_BEG TAG_END
+    {
+        indent();
+        printf("<%s>\n", $1);
+        level++;
+    }
+    ;
+
+end_tag :
+    ETAG_BEG TAG_END
+    ;
+
+content :
     %empty
-    | white_space optional_white_space
+    | content element
+    | content S
+    {
+        append($2);
+    }
+    | content word
+    | content '\n'
+    {
+        append("\n");
+    }
+    ;
+
+word :
+    CHAR
+    {
+        append($1);
+    }
+    | word CHAR
+    {
+        append($2);
+    }
     ;
 %%
 
-int main(void) {
+int main(void){
 
     //yydebug = 1;
     yyparse();
     return 0;
 }
 
-void yyerror(const char *s) {
+void yyerror(const char *s){
     printf("Error: %s\n", s);
 
 }
 
-void indent(int level) {
-    current_line_length = 0;
-    int i;
-    for (i = 0; i < level * INDENT_LENGTH; i++) {
+void indent(){
+    cursor_position = 0;
+    for (int i = 0; i < level * INDENT_LENGTH; i++){
         putchar(' ');
     }
 }
 
-void append(char* src) {
+void append(char* src){
 
     strncat(word, src, MAXSTRLEN);
 
-    if(new_word == true) {
-        indent(level);
+    if(new_line == true){
+        indent();
     }
-    new_word = false;
-    if (level * INDENT_LENGTH + current_line_length + strlen(word) >= LINE_WIDTH) {
-        if (current_line_length == 0) {
+    new_line = false;
+
+    if (level * INDENT_LENGTH + cursor_position + strlen(word) >= LINE_WIDTH){
+        if (cursor_position == 0) {
             print_word();
             printf("\n");
-            indent(level);
-        } else {
+            indent();
+        }
+         else {
             printf("\n");
             indent(level);
         }
-    } else {
-        if (src[0] == ' ') {
+    }
+    else {
+        if (src[0] == ' ' || src[0] == '\t')
+        {
             print_word();
-        } else if (src[0] == '\n') {
+        }
+         else if (src[0] == '\n') {
             print_word();
-            new_word = true;
+            new_line = true;
         }
     }
 }
 
 void print_word() {
-   printf("%s", word);
-    current_line_length += strlen(word);
+    printf("%s", word);
+    cursor_position += strlen(word);
     word[0] = '\0';
 }

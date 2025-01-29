@@ -73,7 +73,7 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 26 "x.y"
+#line 27 "x.y"
 
     char s[MAXSTRLEN +1];
 

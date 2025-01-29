@@ -19,7 +19,7 @@
 
     void append(char* src);
     void print_word();
-    
+
 %}
 
 
@@ -30,7 +30,7 @@
 %start GRAMMAR
 
 %token<s> PI_TAG_BEG PI_TAG_END STAG_BEG ETAG_BEG NAME EQ VALUE
-%token<s> TAG_END ETAG_END CHAR S 
+%token<s> TAG_END ETAG_END CHAR S
 
 %type<s> start_tag end_tag word attributes
 
@@ -38,7 +38,7 @@
 
 GRAMMAR : {yyerror( "Empty input source is not valid!"); }
     %empty
-    | error 
+    | error
     | document
 ;
 
@@ -121,7 +121,7 @@ content :
       append(" ");
     }
     | content word
-    | congit conent '\n'
+    | content '\n'
     {
         append("\n");
     }
@@ -133,18 +133,18 @@ word :
     {
         append($1);
     }
-    | CHAR word
+    | word CHAR
     {
-        append($1);
+        append($2);
     }
 
-    
+
 attributes :
     %empty
     {
-        $$[0] = '\0'; 
+        $$[0] = '\0';
     }
-    | attributes NAME EQ VALUE 
+    | attributes NAME EQ VALUE
     {
         strncat($$, " ", MAXSTRLEN);
         strncat($$, $2, MAXSTRLEN);
@@ -152,7 +152,7 @@ attributes :
         strncat($$, $4, MAXSTRLEN);
     }
     ;
-    
+
 
 
 white_space :
@@ -175,10 +175,11 @@ int main(void) {
 
 void yyerror(const char *s) {
     printf("Error: %s\n", s);
-    
+
 }
 
 void indent(int level) {
+    current_line_length = 0;
     int i;
     for (i = 0; i < level * INDENT_LENGTH; i++) {
         putchar(' ');
@@ -186,7 +187,7 @@ void indent(int level) {
 }
 
 void append(char* src) {
-    
+
     strncat(word, src, MAXSTRLEN);
 
     if(new_word == true) {
@@ -217,9 +218,3 @@ void print_word() {
     current_line_length += strlen(word);
     word[0] = '\0';
 }
-    
-    
-
-
-
-

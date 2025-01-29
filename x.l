@@ -12,14 +12,14 @@ int start_line;
 
     /* DECLARATION SECTION */
 
-IDENT [a-zA-Z_:][a-zA-Z0-9_:-]* 
+IDENT [a-zA-Z_:][a-zA-Z0-9_:-]*
 
  /*States of the lexer analyzer ( INITIAL is the default state) */
 
 %option yylineno
 %x ST_COMMENT
-%x ST_PI 
-%x ST_TAG 
+%x ST_PI
+%x ST_TAG
 %x ST_ATT
 
 
@@ -31,18 +31,16 @@ IDENT [a-zA-Z_:][a-zA-Z0-9_:-]*
     BEGIN(ST_COMMENT); start_line = yylineno;
 }
     /* Detect valid closing tag and change back to default state */
-<ST_COMMENT>"-->" {
+<ST_COMMENT>[^-]*"-->" {
     BEGIN(INITIAL);
 }
 
  /* Ignore everything else in the comment state */
-<ST_COMMENT>[^-]+ ;
-<ST_COMMENT>"-"[^-]* ;
-<ST_COMMENT>\n ;
+<ST_COMMENT>.|\n ;
     /*  PROCESSING INSTRUCTION HANDLING */
 
 <INITIAL>"<?"{IDENT} {
-    BEGIN(ST_PI); 
+    BEGIN(ST_PI);
     int l = strlen(yytext)-2;
     strncpy(yylval.s, yytext + 2, MAXSTRLEN);
     return PI_TAG_BEG;
@@ -58,7 +56,7 @@ IDENT [a-zA-Z_:][a-zA-Z0-9_:-]*
     return PI_TAG_END;
 }
 
-<ST_PI>{IDENT} {strncpy(yylval.s, yytext, MAXSTRLEN);BEGIN(ST_ATT); return NAME; } 
+<ST_PI>{IDENT} {strncpy(yylval.s, yytext, MAXSTRLEN);BEGIN(ST_ATT); return NAME; }
 
 <ST_ATT>"=" {return EQ;}
 
@@ -85,12 +83,12 @@ IDENT [a-zA-Z_:][a-zA-Z0-9_:-]*
     return ETAG_BEG;
 }
 
-<ST_TAG>"/>" {
+<ST_TAG>"/>"[ \t \n \r]* {
     BEGIN(INITIAL);
     return ETAG_END;
 }
 
-<ST_TAG>">" {
+<ST_TAG>">"[ \t \n \r]* {
     BEGIN(INITIAL);
     return TAG_END;
 }
@@ -140,7 +138,7 @@ IDENT [a-zA-Z_:][a-zA-Z0-9_:-]*
 . { strncpy(yylval.s, yytext, MAXSTRLEN); return CHAR; }
 
 
-%% 
+%%
 
 int yywrap(void){
     if(YY_START == ST_COMMENT)
@@ -155,11 +153,6 @@ int yywrap(void){
     {
         fprintf(stderr, "Error: Tag opened on line %d when not closed\n", start_line);
     }
-    
+
     return 1;
 }
-
-
-
-
-

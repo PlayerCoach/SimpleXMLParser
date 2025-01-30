@@ -35,11 +35,6 @@
 
 %type<s> start_tag end_tag word
 
-%left CHAR
-
-%left S
-
-%left '\n'
 
 %%
 

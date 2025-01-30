@@ -35,6 +35,12 @@
 
 %type<s> start_tag end_tag word
 
+%left CHAR
+
+%left S
+
+%left '\n'
+
 %%
 
 GRAMMAR : {yyerror( "Empty input source is not valid!"); }
@@ -86,8 +92,9 @@ pair_of_elements :
     start_tag content end_tag
     {
         if(strncmp($1, $3, MAXSTRLEN) != 0){
-            yyerror("Error: Opening tag does not match closing tag \n");
-            return 1;
+            yyerror("Error: Opening tag does not match closing tag");
+            new_line=true;
+            indent();
         }
 
         if(strlen(word) > 0){
